@@ -1,0 +1,51 @@
+# Binaries
+sysalias
+*.o
+*.out
+*.a
+*.so
+*.exe
+*.dll
+*.dylib
+
+# Build artifacts
+/dist/*
+!/dist/.gitkeep
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.cmake
+
+# Logs and temp
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+*~
+.#*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+*.project
+*.cproject
+
+# Coverage / profiling
+*.gcda
+*.gcno
+*.gcov
+*.prof
+*.profraw
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tests (exclude all test sources and fixtures)
+tests/
+
