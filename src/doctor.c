@@ -31,17 +31,23 @@ static char *dup_cstr(const char *s) {
   return p;
 }
 
-static int cb_dup(const char *n,const char *b,void *ud) {
+static int cb_dup(const char *n,const char *b,const char *sh,void *ud) {
   (void)b;
   char **seen = (char**)ud;
+  char key[1024];
+  key[0] = 0;
+  strncat(key, n, sizeof(key)-1);
+  if (strlen(key)+1 < sizeof(key)) strncat(key,"|",sizeof(key)-strlen(key)-1);
+  if (strlen(key)+strlen(sh) < sizeof(key)) strncat(key,sh,sizeof(key)-strlen(key)-1);
+
   for (int i=0; seen[i]; i++) {
-    if (strcmp(seen[i],n)==0) {
-      fprintf(stderr,"Duplicate alias detected: %s\n",n);
+    if (strcmp(seen[i], key) == 0) {
+      fprintf(stderr,"Duplicate alias detected: %s (%s)\n",n,sh);
       return -1;
     }
   }
   int cnt=0; while (seen[cnt]) cnt++;
-  seen[cnt]=dup_cstr(n);
+  seen[cnt]=dup_cstr(key);
   if (!seen[cnt]) return -1;
   seen[cnt+1]=NULL;
   return 0;
@@ -50,6 +56,7 @@ static int cb_dup(const char *n,const char *b,void *ud) {
 int doctor_run(void) {
   char dir[1024], path[1024]; int errors=0;
   if (fs_xdg_config_dir(dir,sizeof(dir))) { fprintf(stderr,"No XDG config dir\n"); return 1; }
+
   snprintf(path,sizeof(path),"%s/sysalias/aliases.json",dir);
   if (check_file_exists(path)) { fprintf(stderr,"Missing registry: %s\n",path); errors++; }
   snprintf(path,sizeof(path),"%s/sysalias/aliases.bash",dir);
@@ -65,7 +72,6 @@ int doctor_run(void) {
     if (check_block(path)) { fprintf(stderr,".zshrc missing sysalias block\n"); errors++; }
   }
 
-  // Check duplicates
   char *seen[256]={0};
   if (registry_iterate(cb_dup,seen)) errors++;
   for (int i=0; seen[i]; i++) free(seen[i]);
