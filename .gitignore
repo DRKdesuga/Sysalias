@@ -48,4 +48,4 @@ desktop.ini
 
 # Tests (exclude all test sources and fixtures)
 tests/
-
+.clang-format

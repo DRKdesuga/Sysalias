@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cli.h"
+#include "registry.h"
 
 static void print_help(void) {
   printf("Usage:\n");
@@ -23,9 +24,9 @@ int main(int argc, char **argv) {
   switch (opts.cmd) {
     case CMD_HELP: print_help(); return 0;
     case CMD_VERSION: printf("sysalias %s\n", "0.1.0"); return 0;
-    case CMD_LIST: fprintf(stderr,"Not implemented\n"); return 3;
-    case CMD_ADD: fprintf(stderr,"Not implemented\n"); return 3;
-    case CMD_RM: fprintf(stderr,"Not implemented\n"); return 3;
+    case CMD_LIST: return registry_list() ? 1 : 0;
+    case CMD_ADD: return registry_add(opts.arg1) ? 1 : 0;
+    case CMD_RM: return registry_rm(opts.arg1);
     case CMD_SYNC: fprintf(stderr,"Not implemented\n"); return 3;
     case CMD_DOCTOR: fprintf(stderr,"Not implemented\n"); return 3;
     default: fprintf(stderr,"Internal error\n"); return 1;
