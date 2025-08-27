@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "cli.h"
 #include "registry.h"
+#include "sync.h"
 
 static void print_help(void) {
   printf("Usage:\n");
@@ -27,7 +28,7 @@ int main(int argc, char **argv) {
     case CMD_LIST: return registry_list() ? 1 : 0;
     case CMD_ADD: return registry_add(opts.arg1) ? 1 : 0;
     case CMD_RM: return registry_rm(opts.arg1);
-    case CMD_SYNC: fprintf(stderr,"Not implemented\n"); return 3;
+    case CMD_SYNC: return sync_run();
     case CMD_DOCTOR: fprintf(stderr,"Not implemented\n"); return 3;
     default: fprintf(stderr,"Internal error\n"); return 1;
   }
