@@ -3,6 +3,7 @@
 #include "cli.h"
 #include "registry.h"
 #include "sync.h"
+#include "doctor.h"
 
 static void print_help(void) {
   printf("Usage:\n");
@@ -23,13 +24,13 @@ int main(int argc, char **argv) {
   if (rc == -3) { fprintf(stderr,"Missing argument\n"); print_help(); return 2; }
 
   switch (opts.cmd) {
-    case CMD_HELP: print_help(); return 0;
+    case CMD_HELP:    print_help(); return 0;
     case CMD_VERSION: printf("sysalias %s\n", "0.1.0"); return 0;
-    case CMD_LIST: return registry_list() ? 1 : 0;
-    case CMD_ADD: return registry_add(opts.arg1) ? 1 : 0;
-    case CMD_RM: return registry_rm(opts.arg1);
-    case CMD_SYNC: return sync_run();
-    case CMD_DOCTOR: fprintf(stderr,"Not implemented\n"); return 3;
-    default: fprintf(stderr,"Internal error\n"); return 1;
+    case CMD_LIST:    return registry_list() ? 1 : 0;
+    case CMD_ADD:     return registry_add(opts.arg1) ? 1 : 0;
+    case CMD_RM:      return registry_rm(opts.arg1);
+    case CMD_SYNC:    return sync_run();
+    case CMD_DOCTOR:  return doctor_run();
+    default:          fprintf(stderr,"Internal error\n"); return 1;
   }
 }
