@@ -7,7 +7,7 @@
 
 static void print_help(void) {
   printf("Usage:\n");
-  printf("  sysalias add NAME=BODY\n");
+  printf("  sysalias add [--shell bash|zsh] NAME=BODY\n");
   printf("  sysalias rm NAME\n");
   printf("  sysalias list\n");
   printf("  sysalias sync\n");
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     case CMD_HELP:    print_help(); return 0;
     case CMD_VERSION: printf("sysalias %s\n", "0.1.0"); return 0;
     case CMD_LIST:    return registry_list() ? 1 : 0;
-    case CMD_ADD:     return registry_add(opts.arg1) ? 1 : 0;
+    case CMD_ADD:     return registry_add_shell(opts.shell, opts.arg1) ? 1 : 0;
     case CMD_RM:      return registry_rm(opts.arg1);
     case CMD_SYNC:    return sync_run();
     case CMD_DOCTOR:  return doctor_run();

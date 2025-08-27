@@ -16,6 +16,7 @@ typedef struct {
   cmd_t cmd;
   const char *arg1;
   const char *arg2;
+  const char *shell;
 } cli_opts;
 
 int cli_parse(int argc, char **argv, cli_opts *out);
