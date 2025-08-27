@@ -2,9 +2,7 @@
 #include <stdio.h>
 #include "cli.h"
 
-static int eq(const char *a, const char *b) {
-  return a && b && strcmp(a,b)==0;
-}
+static int eq(const char *a, const char *b) { return a && b && strcmp(a,b)==0; }
 
 const char *cli_cmd_str(cmd_t c) {
   switch (c) {
@@ -39,10 +37,18 @@ int cli_parse(int argc, char **argv, cli_opts *out) {
   out->cmd = c;
   out->arg1 = NULL;
   out->arg2 = NULL;
+  out->shell = "any";
   if (c == CMD_ADD) {
-    if (argc < 3) return -3;
-    out->arg1 = argv[2];
-    if (argc > 3) out->arg2 = argv[3];
+    int i = 2;
+    if (i < argc && eq(argv[i], "--shell")) {
+      if (i+1 >= argc) return -3;
+      if (!eq(argv[i+1],"bash") && !eq(argv[i+1],"zsh")) return -3;
+      out->shell = argv[i+1];
+      i += 2;
+    }
+    if (i >= argc) return -3;
+    out->arg1 = argv[i];
+    if (i+1 < argc) out->arg2 = argv[i+1];
   } else if (c == CMD_RM) {
     if (argc < 3) return -3;
     out->arg1 = argv[2];

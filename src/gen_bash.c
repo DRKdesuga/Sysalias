@@ -6,7 +6,7 @@
 #include "fsutil.h"
 #include "strutil.h"
 
-typedef struct { char *buf; size_t cap; size_t len; } sb_t;
+typedef struct { char *buf; size_t cap; size_t len; const char *want; } sb_t;
 
 static int sb_add(sb_t *s, const char *a, const char *b) {
     char *eb = s_escape_sh_single(b);
@@ -24,8 +24,13 @@ static int sb_add(sb_t *s, const char *a, const char *b) {
     return 0;
 }
 
-static int cb_bash(const char *n, const char *b, void *ud) {
+static int cb_filter(const char *n, const char *b, const char *sh, void *ud) {
     sb_t *s = (sb_t*)ud;
+    if (strcmp(s->want,"bash")==0) {
+        if (!(strcmp(sh,"any")==0 || strcmp(sh,"bash")==0)) return 0;
+    } else {
+        if (!(strcmp(sh,"any")==0 || strcmp(sh,"zsh")==0)) return 0;
+    }
     return sb_add(s, n, b);
 }
 
@@ -42,11 +47,13 @@ static int write_file(const char *name, const char *data, size_t len) {
 
 int gen_generate_all(void) {
     sb_t sb = {0};
-    if (registry_iterate(cb_bash, &sb)) { free(sb.buf); return -1; }
+    sb.want = "bash";
+    if (registry_iterate(cb_filter, &sb)) { free(sb.buf); return -1; }
     if (write_file("aliases.bash", sb.buf ? sb.buf : "", sb.len)) { free(sb.buf); return -1; }
     free(sb.buf);
     sb.buf = NULL; sb.cap = 0; sb.len = 0;
-    if (registry_iterate(cb_bash, &sb)) { free(sb.buf); return -1; }
+    sb.want = "zsh";
+    if (registry_iterate(cb_filter, &sb)) { free(sb.buf); return -1; }
     if (write_file("aliases.zsh", sb.buf ? sb.buf : "", sb.len)) { free(sb.buf); return -1; }
     free(sb.buf);
     return 0;

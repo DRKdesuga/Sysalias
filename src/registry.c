@@ -9,6 +9,7 @@
 typedef struct {
   char *name;
   char *body;
+  char *shell; /* "any" | "bash" | "zsh" */
 } alias_t;
 
 static alias_t *R = NULL;
@@ -32,17 +33,18 @@ static int reg_path(char *out, size_t cap) {
 }
 
 static void reg_free(void) {
-  for (size_t i = 0; i < RN; i++) { free(R[i].name); free(R[i].body); }
+  for (size_t i = 0; i < RN; i++) { free(R[i].name); free(R[i].body); free(R[i].shell); }
   free(R);
   R = NULL;
   RN = 0;
   RC = 0;
 }
 
-static int reg_push(const char *n, const char *b) {
+static int reg_push(const char *n, const char *b, const char *sh) {
   if (!n || !*n || !b) return -1;
+  const char *shell = sh && *sh ? sh : "any";
   for (size_t i = 0; i < RN; i++) {
-    if (strcmp(R[i].name, n) == 0) {
+    if (strcmp(R[i].name, n) == 0 && strcmp(R[i].shell, shell) == 0) {
       char *nb = s_dup(b);
       if (!nb) return -1;
       free(R[i].body);
@@ -54,27 +56,27 @@ static int reg_push(const char *n, const char *b) {
     size_t nc = RC ? RC * 2 : 8;
     alias_t *nr = realloc(R, nc * sizeof(alias_t));
     if (!nr) return -1;
-    R = nr;
-    RC = nc;
+    R = nr; RC = nc;
   }
   R[RN].name = s_dup(n);
   R[RN].body = s_dup(b);
-  if (!R[RN].name || !R[RN].body) return -1;
+  R[RN].shell = s_dup(shell);
+  if (!R[RN].name || !R[RN].body || !R[RN].shell) return -1;
   RN++;
   return 0;
 }
 
 static int reg_del(const char *n) {
-  for (size_t i = 0; i < RN; i++) {
+  int removed = -1;
+  for (size_t i = 0; i < RN; ) {
     if (strcmp(R[i].name, n) == 0) {
-      free(R[i].name);
-      free(R[i].body);
+      free(R[i].name); free(R[i].body); free(R[i].shell);
       memmove(&R[i], &R[i+1], (RN - i - 1) * sizeof(alias_t));
-      RN--;
-      return 0;
+      RN--; removed = 0; continue;
     }
+    i++;
   }
-  return -1;
+  return removed;
 }
 
 static int reg_load(void) {
@@ -99,24 +101,19 @@ static int reg_load(void) {
     char *obj = malloc(ln + 1);
     if (!obj) { free(buf); return -1; }
     memcpy(obj, o, ln); obj[ln] = 0;
-    char *n = NULL;
-    char *b = NULL;
+
+    char *n = NULL; char *b = NULL; char *sh = NULL;
     char *kn = strstr(obj, "\"name\":\"");
-    if (kn) {
-      kn += 8;
-      char *en = strchr(kn, '"');
-      if (en) { *en = 0; n = s_dup(kn); *en = '"'; }
-    }
+    if (kn) { kn += 8; char *en = strchr(kn, '"'); if (en) { *en = 0; n = s_dup(kn); *en = '"'; } }
     char *kb = strstr(obj, "\"body\":\"");
-    if (kb) {
-      kb += 8;
-      char *eb = strchr(kb, '"');
-      if (eb) { *eb = 0; b = s_dup(kb); *eb = '"'; }
-    }
-    if (n && b) {
-      if (reg_push(n, b) < 0) { free(n); free(b); free(obj); free(buf); return -1; }
-      free(n);
-      free(b);
+    if (kb) { kb += 8; char *eb = strchr(kb, '"'); if (eb) { *eb = 0; b = s_dup(kb); *eb = '"'; } }
+    char *ks = strstr(obj, "\"shell\":\"");
+    if (ks) { ks += 9; char *es = strchr(ks, '"'); if (es) { *es = 0; sh = s_dup(ks); *es = '"'; } }
+
+    if (!sh) sh = s_dup("any");
+    if (n && b && sh) {
+      if (reg_push(n, b, sh) < 0) { free(n); free(b); free(sh); free(obj); free(buf); return -1; }
+      free(n); free(b); free(sh);
     }
     free(obj);
     q = c + 1;
@@ -131,18 +128,15 @@ static int reg_save(void) {
   if (reg_dir(d, sizeof(d))) return -1;
   if (fs_mkdir_p(d)) return -1;
   if (reg_path(p, sizeof(p))) return -1;
-  size_t cap = 128 + RN * 128;
+  size_t cap = 128 + RN * 160;
   char *buf = malloc(cap);
   if (!buf) return -1;
   size_t off = 0;
   off += snprintf(buf + off, cap - off, "{\"aliases\":[");
   for (size_t i = 0; i < RN; i++) {
     if (i) off += snprintf(buf + off, cap - off, ",");
-    off += snprintf(buf + off, cap - off, "{\"name\":\"");
-    off += snprintf(buf + off, cap - off, "%s", R[i].name);
-    off += snprintf(buf + off, cap - off, "\",\"body\":\"");
-    off += snprintf(buf + off, cap - off, "%s", R[i].body);
-    off += snprintf(buf + off, cap - off, "\",\"shell\":\"any\",\"type\":\"alias\"}");
+    off += snprintf(buf + off, cap - off, "{\"name\":\"%s\",\"body\":\"%s\",\"shell\":\"%s\",\"type\":\"alias\"}",
+                    R[i].name, R[i].body, R[i].shell);
     if (off + 64 > cap) {
       cap *= 2;
       char *nb = realloc(buf, cap);
@@ -156,22 +150,23 @@ static int reg_save(void) {
   return rc;
 }
 
-int registry_add(const char *kv) {
+int registry_add_shell(const char *shell, const char *kv) {
   if (!kv) return -1;
   char *name = NULL;
   char *body = NULL;
   if (s_split_kv(kv, &name, &body)) return -1;
   int rc = reg_load();
   if (rc) { free(name); free(body); return -1; }
-  rc = reg_push(name, body);
+  rc = reg_push(name, body, shell);
   if (rc < 0) { free(name); free(body); reg_free(); return -1; }
   rc = reg_save();
-  free(name);
-  free(body);
+  free(name); free(body);
   reg_free();
   if (rc) return -1;
   return 0;
 }
+
+int registry_add(const char *kv) { return registry_add_shell("any", kv); }
 
 int registry_rm(const char *name) {
   if (!name || !*name) return -1;
@@ -198,7 +193,7 @@ int registry_iterate(reg_cb cb, void *ud) {
   int rc = reg_load();
   if (rc) return -1;
   for (size_t i = 0; i < RN; i++) {
-    if (cb(R[i].name, R[i].body, ud)) { reg_free(); return -1; }
+    if (cb(R[i].name, R[i].body, R[i].shell, ud)) { reg_free(); return -1; }
   }
   reg_free();
   return 0;
