@@ -192,3 +192,14 @@ int registry_list(void) {
   reg_free();
   return 0;
 }
+
+int registry_iterate(reg_cb cb, void *ud) {
+  if (!cb) return -1;
+  int rc = reg_load();
+  if (rc) return -1;
+  for (size_t i = 0; i < RN; i++) {
+    if (cb(R[i].name, R[i].body, ud)) { reg_free(); return -1; }
+  }
+  reg_free();
+  return 0;
+}

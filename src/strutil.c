@@ -40,3 +40,20 @@ int s_split_kv(const char *in, char **name, char **body) {
     *body = b;
     return 0;
 }
+
+char *s_escape_sh_single(const char *s) {
+    if (!s) return NULL;
+    size_t n = 0, i = 0;
+    while (s[i]) { n += (s[i] == '\'') ? 4 : 1; i++; }
+    char *o = malloc(n + 3);
+    if (!o) return NULL;
+    size_t k = 0; i = 0;
+    while (s[i]) {
+        if (s[i] == '\'') {
+            o[k++] = '\''; o[k++] = '\\'; o[k++] = '\''; o[k++] = '\'';
+        } else o[k++] = s[i];
+        i++;
+    }
+    o[k] = 0;
+    return o;
+}
