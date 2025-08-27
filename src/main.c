@@ -1,0 +1,33 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "cli.h"
+
+static void print_help(void) {
+  printf("Usage:\n");
+  printf("  sysalias add NAME=BODY\n");
+  printf("  sysalias rm NAME\n");
+  printf("  sysalias list\n");
+  printf("  sysalias sync\n");
+  printf("  sysalias doctor\n");
+  printf("  sysalias help\n");
+  printf("  sysalias version\n");
+}
+
+int main(int argc, char **argv) {
+  cli_opts opts;
+  int rc = cli_parse(argc, argv, &opts);
+  if (rc == -1) { fprintf(stderr,"No command provided\n"); print_help(); return 2; }
+  if (rc == -2) { fprintf(stderr,"Unknown command\n"); print_help(); return 2; }
+  if (rc == -3) { fprintf(stderr,"Missing argument\n"); print_help(); return 2; }
+
+  switch (opts.cmd) {
+    case CMD_HELP: print_help(); return 0;
+    case CMD_VERSION: printf("sysalias %s\n", "0.1.0"); return 0;
+    case CMD_LIST: fprintf(stderr,"Not implemented\n"); return 3;
+    case CMD_ADD: fprintf(stderr,"Not implemented\n"); return 3;
+    case CMD_RM: fprintf(stderr,"Not implemented\n"); return 3;
+    case CMD_SYNC: fprintf(stderr,"Not implemented\n"); return 3;
+    case CMD_DOCTOR: fprintf(stderr,"Not implemented\n"); return 3;
+    default: fprintf(stderr,"Internal error\n"); return 1;
+  }
+}
