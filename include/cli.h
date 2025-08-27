@@ -9,7 +9,9 @@ typedef enum {
   CMD_SYNC,
   CMD_DOCTOR,
   CMD_HELP,
-  CMD_VERSION
+  CMD_VERSION,
+  CMD_EXPORT,
+  CMD_IMPORT
 } cmd_t;
 
 typedef struct {

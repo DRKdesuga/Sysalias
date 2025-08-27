@@ -198,3 +198,85 @@ int registry_iterate(reg_cb cb, void *ud) {
   reg_free();
   return 0;
 }
+
+static int reg_load_from_buf(const char *buf) {
+  if (!buf) return -1;
+  char *a = strstr(buf, "\"aliases\":[");
+  if (!a) return 0;
+  a = strchr(a, '[');
+  if (!a) return 0;
+  const char *q = a + 1;
+  while (1) {
+    const char *o = strchr(q, '{');
+    if (!o) break;
+    const char *c = strchr(o, '}');
+    if (!c) return -1;
+    size_t ln = (size_t)(c - o + 1);
+    char *obj = malloc(ln + 1);
+    if (!obj) return -1;
+    memcpy(obj, o, ln); obj[ln] = 0;
+
+    char *n = NULL; char *b = NULL; char *sh = NULL;
+    char *kn = strstr(obj, "\"name\":\"");
+    if (kn) { kn += 8; char *en = strchr(kn, '"'); if (en) { *en = 0; n = s_dup(kn); *en = '"'; } }
+    char *kb = strstr(obj, "\"body\":\"");
+    if (kb) { kb += 8; char *eb = strchr(kb, '"'); if (eb) { *eb = 0; b = s_dup(kb); *eb = '"'; } }
+    char *ks = strstr(obj, "\"shell\":\"");
+    if (ks) { ks += 9; char *es = strchr(ks, '"'); if (es) { *es = 0; sh = s_dup(ks); *es = '"'; } }
+    if (!sh) sh = s_dup("any");
+    if (n && b && sh) {
+      if (reg_push(n, b, sh) < 0) { free(n); free(b); free(sh); free(obj); return -1; }
+      free(n); free(b); free(sh);
+    }
+    free(obj);
+    q = c + 1;
+  }
+  return 0;
+}
+
+int registry_export_stdout(void) {
+  int rc = reg_load();
+  if (rc) return -1;
+  size_t cap = 128 + RN * 160;
+  char *buf = malloc(cap);
+  if (!buf) { reg_free(); return -1; }
+  size_t off = 0;
+  off += snprintf(buf + off, cap - off, "{\"aliases\":[");
+  for (size_t i = 0; i < RN; i++) {
+    if (i) off += snprintf(buf + off, cap - off, ",");
+    off += snprintf(buf + off, cap - off, "{\"name\":\"%s\",\"body\":\"%s\",\"shell\":\"%s\",\"type\":\"alias\"}",
+                    R[i].name, R[i].body, R[i].shell);
+    if (off + 64 > cap) {
+      cap *= 2;
+      char *nb = realloc(buf, cap);
+      if (!nb) { free(buf); reg_free(); return -1; }
+      buf = nb;
+    }
+  }
+  off += snprintf(buf + off, cap - off, "]}");
+  fwrite(buf, 1, off, stdout);
+  fputc('\n', stdout);
+  free(buf);
+  reg_free();
+  return 0;
+}
+
+int registry_import_path(const char *path) {
+  if (!path || !*path) return -1;
+  char *buf = NULL; size_t len = 0;
+  if (fs_read_all(path, &buf, &len)) return -1;
+  alias_t *oldR = R; size_t oldRN = RN; size_t oldRC = RC;
+  R = NULL; RN = 0; RC = 0;
+  int rc = reg_load_from_buf(buf);
+  free(buf);
+  if (rc) { free(R); R = oldR; RN = oldRN; RC = oldRC; return -1; }
+  rc = reg_save();
+  if (rc) { reg_free(); R = oldR; RN = oldRN; RC = oldRC; return -1; }
+  if (oldR) {
+    for (size_t i=0;i<oldRN;i++){ free(oldR[i].name); free(oldR[i].body); free(oldR[i].shell); }
+    free(oldR);
+  }
+  reg_free();
+  return 0;
+}
+

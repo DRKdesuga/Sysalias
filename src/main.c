@@ -12,6 +12,8 @@ static void print_help(void) {
   printf("  sysalias list\n");
   printf("  sysalias sync\n");
   printf("  sysalias doctor\n");
+  printf("  sysalias export\n");
+  printf("  sysalias import FILE\n");
   printf("  sysalias help\n");
   printf("  sysalias version\n");
 }
@@ -31,6 +33,8 @@ int main(int argc, char **argv) {
     case CMD_RM:      return registry_rm(opts.arg1);
     case CMD_SYNC:    return sync_run();
     case CMD_DOCTOR:  return doctor_run();
+    case CMD_EXPORT:  return registry_export_stdout();
+    case CMD_IMPORT:  return registry_import_path(opts.arg1);
     default:          fprintf(stderr,"Internal error\n"); return 1;
   }
 }
