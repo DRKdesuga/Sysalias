@@ -207,3 +207,14 @@ sysalias/
 ![Screenshot](examples/screen1.png)
 
 ![Screenshot](examples/screen2.png)
+
+## 📜 License
+
+This project is licensed under the GNU General Public License v3.0 (GPLv3).
+
+Copyright (C) 2025  DRKdesuga
+
+You may redistribute and/or modify this project under the terms of the GNU GPL,
+either version 3 of the License, or (at your option) any later version.
+
+See the [LICENSE](LICENSE) file for the full text.
